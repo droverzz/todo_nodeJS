@@ -1,103 +1,157 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+
+type Todo = { id: number; task: string; done: boolean };
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [input, setInput] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  // โหลด todos
+  useEffect(() => {
+    fetch("/api/todos")
+      .then((res) => res.json())
+      .then((data) => setTodos(data));
+  }, []);
+
+  // เพิ่ม task
+  const addTodo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    const res = await fetch("/api/todos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ task: input }),
+    });
+
+    const newTodo = await res.json();
+    setTodos([...todos, newTodo]);
+    setInput("");
+  };
+
+  // toggle done
+  const toggleDone = async (id: number, done: boolean) => {
+    const res = await fetch(`/api/todos/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ done: !done }),
+    });
+    const updated = await res.json();
+    setTodos(todos.map((t) => (t.id === id ? updated : t)));
+  };
+
+  // ลบ
+  const deleteTodo = async (id: number) => {
+    await fetch(`/api/todos/${id}`, { method: "DELETE" });
+    setTodos(todos.filter((t) => t.id !== id));
+  };
+
+  // เริ่มแก้ไข
+  const startEdit = (id: number, task: string) => {
+    setEditingId(id);
+    setEditText(task);
+  };
+
+  // บันทึกแก้ไข
+  const saveEdit = async (id: number) => {
+    const res = await fetch(`/api/todos/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ task: editText }),
+    });
+    const updated = await res.json();
+    setTodos(todos.map((t) => (t.id === id ? updated : t)));
+    setEditingId(null);
+    setEditText("");
+  };
+
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-100">
+      <div className="bg-white rounded shadow p-8 w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-4">Todo List</h1>
+
+        {/* input เพิ่มงาน */}
+        <form className="flex mb-4" onSubmit={addTodo}>
+          <input
+            className="flex-1 border p-2 rounded-l"
+            placeholder="เพิ่มงานใหม่..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+          />
+          <button
+            className="bg-blue-500 text-white px-4 py-2 rounded-r hover:bg-blue-600"
+            type="submit"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+            เพิ่ม
+          </button>
+        </form>
+
+        {/* list */}
+        <ul>
+          {todos.map((todo) => (
+            <li
+              key={todo.id}
+              className="flex items-center justify-between py-2 border-b"
+            >
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={todo.done}
+                  onChange={() => toggleDone(todo.id, todo.done)}
+                />
+                {editingId === todo.id ? (
+                  <input
+                    className="border p-1"
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                  />
+                ) : (
+                  <span className={todo.done ? "line-through text-gray-500" : ""}>
+                    {todo.task}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                {editingId === todo.id ? (
+                  <>
+                    <button
+                      onClick={() => saveEdit(todo.id)}
+                      className="text-green-600 hover:underline"
+                    >
+                      บันทึก
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="text-gray-500 hover:underline"
+                    >
+                      ยกเลิก
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => startEdit(todo.id, todo.task)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    แก้ไข
+                  </button>
+                )}
+
+                <button
+                  onClick={() => deleteTodo(todo.id)}
+                  className="text-red-600 hover:underline"
+                >
+                  ลบ
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </main>
   );
 }
